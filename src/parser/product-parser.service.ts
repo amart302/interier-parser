@@ -40,7 +40,22 @@ export class ProductParserService {
 
     const imageUrls = await page.$$eval(
       '.prw-panel a.nx-fancybox[href]',
-      (elements) => [...new Set(elements.map((element) => element.href))],
+      (elements) => [
+        ...new Set(
+          elements.map((element) => {
+            const url = new URL(element.href);
+            // Relative gallery links resolve against www, but uploads live on static.
+            if (
+              ['electra.ru', 'www.electra.ru'].includes(url.hostname) &&
+              url.pathname.startsWith('/upload/')
+            ) {
+              url.protocol = 'https:';
+              url.hostname = 'static.electra.ru';
+            }
+            return url.href;
+          }),
+        ),
+      ],
     );
 
     if (imageUrls.length === 0) {

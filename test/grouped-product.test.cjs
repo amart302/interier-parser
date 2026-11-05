@@ -147,3 +147,18 @@ test('product parser returns grouped data and all source characteristics', async
   assert.equal(result.packaging.packaging, '1/50');
   assert.equal(result.attributes[0].key, 'features');
 });
+
+test('product parser uses static originals for relative gallery links and deduplicates them', async () => {
+  const first = 'https://static.electra.ru/upload/iblock/d9a/2dpmkhx7cwfznfgy8e5v05vv59tt9xp5/1433341_1.jpg';
+  const secondPath = '/upload/iblock/a39/82j23d88yj7ejbm7sz80mhntsvz4cwlb/1433341_2.jpg';
+  const second = `https://static.electra.ru${secondPath}`;
+  const links = [first, `https://www.electra.ru${secondPath}`, second, 'https://example.com/image.jpg'];
+  const page = {
+    goto: async () => ({ ok: () => true }), waitForSelector: async () => {},
+    $eval: async () => 'Светильник',
+    $$eval: async (selector, callback) => callback(selector === 'tr' ? [] : links.map(href => ({ href }))),
+  };
+  const service = new ProductParserService({ getPage: () => page });
+  const result = await service.getProductData('https://www.electra.ru/catalog/product');
+  assert.deepEqual(result.imageUrls, [first, second, 'https://example.com/image.jpg']);
+});
